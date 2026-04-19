@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>JavaScript基础知识练习 - 于佳</title>
+    <style>
+        body { padding: 20px; font-family: "微软雅黑", sans-serif; background: #f5f7fa; color: #2c3e50; }
+        h1 { margin-bottom: 10px; }
+        #output { margin-top: 20px; line-height: 1.8; background: #fff; border: 1px solid #dde4ee; padding: 16px; border-radius: 8px; }
+        #output p { margin: 8px 0; }
+        .section-title { margin-top: 16px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>JavaScript基础知识练习 - 于佳</h1>
+    <div id="output"></div>
+
+    <script>
+        // 工具函数：打印内容到页面
+        const outputBox = document.getElementById('output');
+        function printLog(text) {
+            const paragraph = document.createElement('p');
+            paragraph.innerHTML = text;
+            outputBox.appendChild(paragraph);
+        }
+
+        // 1. 变量定义 & 变量类型
+        printLog('<span class="section-title">=== 1. 变量定义与变量类型 ===</span>');
+        let username = '于佳';
+        const studentId = 'P241012329';
+        let age = 20;
+        let isStudent = true;
+        let emptyVal = null;
+        let unDef;
+
+        printLog(`用户名：${username}，类型：${typeof username}`);
+        printLog(`学号：${studentId}，类型：${typeof studentId}`);
+        printLog(`年龄：${age}，类型：${typeof age}`);
+        printLog(`是否学生：${isStudent}，类型：${typeof isStudent}`);
+        printLog(`空值变量：${emptyVal}，类型：${typeof emptyVal}`);
+        printLog(`未定义变量：${unDef}，类型：${typeof unDef}`);
+
+        // 2. 表达式练习
+        printLog('<span class="section-title">=== 2. 表达式练习（算术、比较、逻辑） ===</span>');
+        let arithmeticResult = 10 + 5 * 2 - 12 / 3;
+        printLog(`算术表达式 10 + 5 * 2 - 12 / 3 = ${arithmeticResult}`);
+        printLog(`比较表达式 age > 18：${age > 18}`);
+        printLog(`逻辑表达式 isStudent && age >= 18：${isStudent && age >= 18}`);
+        printLog(`逻辑表达式 isStudent || age < 18：${isStudent || age < 18}`);
+
+        // 3. 流程控制
+        printLog('<span class="section-title">=== 3. 流程控制（if-else、for、while） ===</span>');
+        if (age >= 18) {
+            printLog('if判断：你已成年');
+        } else {
+            printLog('if判断：你未成年');
+        }
+
+        printLog('for循环（1 到 5）：');
+        for (let i = 1; i <= 5; i++) {
+            printLog(`第 ${i} 次循环：当前数字是 ${i}`);
+        }
+
+        printLog('while循环（倒计时 3 到 1）：');
+        let count = 3;
+        while (count > 0) {
+            printLog(`倒计时：${count}`);
+            count--;
+        }
+
+        // 4. 函数练习
+        printLog('<span class="section-title">=== 4. 函数练习（无参、带参、带返回值） ===</span>');
+        function sayHi() {
+            printLog('无参函数：Hello, JS!');
+        }
+        sayHi();
+
+        function greet(name) {
+            printLog(`带参函数：你好，${name}！`);
+        }
+        greet(username);
+
+        function add(a, b) {
+            return a + b;
+        }
+        let sum = add(12, 34);
+        printLog(`带返回值函数：12 + 34 = ${sum}`);
+
+        printLog('✅ 作业已完成：所有内容已打印在页面上。');
+    </script>
+</body>
+</html>
