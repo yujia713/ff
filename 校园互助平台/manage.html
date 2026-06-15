@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>校园互助平台 - 我的信息管理</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 导航栏 -->
+        <nav class="nav">
+            <h1>校园互助平台</h1>
+            <div class="nav-links">
+                <a href="index.html">信息提交</a>
+                <a href="search.html">筛选检索</a>
+                <a href="manage.html" class="active">我的信息</a>
+            </div>
+        </nav>
+
+        <!-- 页面标题 -->
+        <div class="page-header">
+            <h1>我的信息管理</h1>
+            <p>通过邮箱管理你的学长学姐信息</p>
+        </div>
+
+        <!-- 查找信息 -->
+        <div class="card">
+            <h2>查找我的信息</h2>
+            <form id="findForm" style="display: flex; gap: 15px; align-items: flex-end;">
+                <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                    <label>管理邮箱</label>
+                    <input type="email" id="searchEmail" placeholder="请输入你提交信息时填写的邮箱" required>
+                </div>
+                <button type="submit" class="btn btn-primary">查找</button>
+            </form>
+        </div>
+
+        <!-- 我的信息列表 -->
+        <div class="card" id="myInfoCard" style="display: none;">
+            <h2>我的信息列表</h2>
+            <div id="myInfoList"></div>
+        </div>
+
+        <!-- 编辑模态框 -->
+        <div class="modal" id="editModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>编辑信息</h3>
+                    <button class="modal-close" onclick="closeEditModal()">&times;</button>
+                </div>
+                <form id="editForm">
+                    <input type="hidden" id="editId">
+                    
+                    <div class="form-group">
+                        <label>学院名称 <span class="required">*</span></label>
+                        <input type="text" id="editCollege" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>专业名称 <span class="required">*</span></label>
+                        <input type="text" id="editMajor" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>入学/毕业年份</label>
+                        <input type="text" id="editYear">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>发展方向 <span class="required">*</span></label>
+                        <select id="editDirection" required>
+                            <option value="">请选择</option>
+                            <option value="考研">考研</option>
+                            <option value="全职工作">全职工作</option>
+                            <option value="留学">留学</option>
+                            <option value="公考">公考</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>擅长答疑内容</label>
+                        <textarea id="editSkill"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>联系方式</label>
+                        <input type="text" id="editContact">
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="editIsShow">
+                            <label for="editIsShow">公开联系方式</label>
+                        </div>
+                    </div>
+                    
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" onclick="closeEditModal()">取消</button>
+                        <button type="submit" class="btn btn-primary">保存修改</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 下架确认模态框 -->
+        <div class="modal" id="offlineModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>确认下架</h3>
+                    <button class="modal-close" onclick="closeOfflineModal()">&times;</button>
+                </div>
+                <p style="margin-bottom: 20px; color: #666;">
+                    确定要下架这条信息吗？下架后其他人将无法看到你的信息，但你可以随时重新上架。
+                </p>
+                <input type="hidden" id="offlineId">
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeOfflineModal()">取消</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmOffline()">确认下架</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 提示消息容器 -->
+    <div id="toastContainer"></div>
+
+    <script src="js/storage.js"></script>
+    <script>
+        // 页面加载时如果有上次保存的邮箱，自动填充
+        document.addEventListener('DOMContentLoaded', function() {
+            const lastEmail = localStorage.getItem('last_submit_email');
+            if (lastEmail) {
+                document.getElementById('searchEmail').value = lastEmail;
+            }
+        });
+        
+        // 查找表单提交
+        document.getElementById('findForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const email = document.getElementById('searchEmail').value.trim();
+            
+            if (!email) {
+                showToast('请输入邮箱', 'error');
+                return;
+            }
+            
+            // 查询所有状态的数据（包括已下架）
+            const allMyData = Storage.query({ email: email, status: 'all' });
+            
+            if (allMyData.length === 0) {
+                showToast('未找到你的任何信息，请确认邮箱是否正确', 'error');
+                document.getElementById('myInfoCard').style.display = 'none';
+                return;
+            }
+            
+            renderMyInfo(allMyData);
+            document.getElementById('myInfoCard').style.display = 'block';
+        });
+        
+        // 渲染我的信息列表
+        function renderMyInfo(data) {
+            const container = document.getElementById('myInfoList');
+            
+            if (data.length === 0) {
+                container.innerHTML = '<p class="empty-state">暂无信息</p>';
+                return;
+            }
+            
+            container.innerHTML = data.map(item => `
+                <div style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; margin-bottom: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
+                        <div>
+                            <strong style="font-size: 18px;">${escapeHtml(item.college)} - ${escapeHtml(item.major)}</strong>
+                            <span class="badge ${item.status ? 'badge-success' : 'badge-secondary'}" style="margin-left: 10px;">
+                                ${item.status ? '展示中' : '已下架'}
+                            </span>
+                        </div>
+                        <div style="font-size: 12px; color: #999;">ID: ${item.id}</div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px; font-size: 14px; color: #666;">
+                        <div>年份：${escapeHtml(item.year) || '-'}</div>
+                        <div>方向：<span class="badge badge-direction">${escapeHtml(item.direction)}</span></div>
+                        <div>联系方式：${item.is_show ? escapeHtml(item.contact) || '暂无' : '<span class="contact-hidden">已隐藏</span>'}</div>
+                        <div>邮箱：${escapeHtml(item.email)}</div>
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <div style="font-size: 14px; color: #666; margin-bottom: 5px;">擅长领域：</div>
+                        <div style="font-size: 14px;">${escapeHtml(item.skill) || '-'}</div>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-primary" onclick="openEditModal(${item.id})">编辑</button>
+                        ${item.status 
+                            ? `<button class="btn btn-danger" onclick="openOfflineModal(${item.id})">下架</button>`
+                            : `<button class="btn btn-success" onclick="rePublish(${item.id})">重新上架</button>`
+                        }
+                        <button class="btn btn-secondary" onclick="deleteInfo(${item.id})">删除</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // 打开编辑模态框
+        function openEditModal(id) {
+            const item = Storage.getById(id);
+            if (!item) {
+                showToast('信息不存在', 'error');
+                return;
+            }
+            
+            document.getElementById('editId').value = item.id;
+            document.getElementById('editCollege').value = item.college;
+            document.getElementById('editMajor').value = item.major;
+            document.getElementById('editYear').value = item.year || '';
+            document.getElementById('editDirection').value = item.direction;
+            document.getElementById('editSkill').value = item.skill || '';
+            document.getElementById('editContact').value = item.contact || '';
+            document.getElementById('editIsShow').checked = item.is_show;
+            
+            document.getElementById('editModal').classList.add('active');
+        }
+        
+        // 关闭编辑模态框
+        function closeEditModal() {
+            document.getElementById('editModal').classList.remove('active');
+        }
+        
+        // 编辑表单提交
+        document.getElementById('editForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const id = document.getElementById('editId').value;
+            const updates = {
+                college: document.getElementById('editCollege').value.trim(),
+                major: document.getElementById('editMajor').value.trim(),
+                year: document.getElementById('editYear').value.trim(),
+                direction: document.getElementById('editDirection').value,
+                skill: document.getElementById('editSkill').value.trim(),
+                contact: document.getElementById('editContact').value.trim(),
+                is_show: document.getElementById('editIsShow').checked
+            };
+            
+            // 校验
+            if (!updates.college || !updates.major || !updates.direction) {
+                showToast('请填写所有必填项', 'error');
+                return;
+            }
+            
+            Storage.update(id, updates);
+            closeEditModal();
+            showToast('修改成功！', 'success');
+            
+            // 重新加载列表
+            const email = document.getElementById('searchEmail').value.trim();
+            const data = Storage.query({ email: email, status: 'all' });
+            renderMyInfo(data);
+        });
+        
+        // 打开下架确认模态框
+        function openOfflineModal(id) {
+            document.getElementById('offlineId').value = id;
+            document.getElementById('offlineModal').classList.add('active');
+        }
+        
+        // 关闭下架确认模态框
+        function closeOfflineModal() {
+            document.getElementById('offlineModal').classList.remove('active');
+        }
+        
+        // 确认下架
+        function confirmOffline() {
+            const id = document.getElementById('offlineId').value;
+            Storage.update(id, { status: false });
+            closeOfflineModal();
+            showToast('信息已下架', 'success');
+            
+            // 重新加载列表
+            const email = document.getElementById('searchEmail').value.trim();
+            const data = Storage.query({ email: email, status: 'all' });
+            renderMyInfo(data);
+        }
+        
+        // 重新上架
+        function rePublish(id) {
+            Storage.update(id, { status: true });
+            showToast('信息已重新上架', 'success');
+            
+            // 重新加载列表
+            const email = document.getElementById('searchEmail').value.trim();
+            const data = Storage.query({ email: email, status: 'all' });
+            renderMyInfo(data);
+        }
+        
+        // 删除信息
+        function deleteInfo(id) {
+            if (!confirm('确定要删除这条信息吗？此操作不可恢复！')) {
+                return;
+            }
+            
+            Storage.remove(id);
+            showToast('信息已删除', 'success');
+            
+            // 重新加载列表
+            const email = document.getElementById('searchEmail').value.trim();
+            const data = Storage.query({ email: email, status: 'all' });
+            renderMyInfo(data);
+        }
+        
+        // HTML转义
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // 显示提示消息
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

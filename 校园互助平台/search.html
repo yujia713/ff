@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>校园互助平台 - 筛选检索</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 导航栏 -->
+        <nav class="nav">
+            <h1>校园互助平台</h1>
+            <div class="nav-links">
+                <a href="index.html">信息提交</a>
+                <a href="search.html" class="active">筛选检索</a>
+                <a href="manage.html">我的信息</a>
+            </div>
+        </nav>
+
+        <!-- 页面标题 -->
+        <div class="page-header">
+            <h1>筛选检索</h1>
+            <p>找到适合你的学长学姐，获取宝贵经验</p>
+        </div>
+
+        <!-- 统计信息 -->
+        <div class="stats" id="statsContainer">
+            <div class="stat-card">
+                <h4>全部学长学姐</h4>
+                <p id="totalCount">0</p>
+            </div>
+            <div class="stat-card">
+                <h4>考研方向</h4>
+                <p id="kaoyanCount">0</p>
+            </div>
+            <div class="stat-card">
+                <h4>全职工作</h4>
+                <p id="jobCount">0</p>
+            </div>
+            <div class="stat-card">
+                <h4>留学方向</h4>
+                <p id="abroadCount">0</p>
+            </div>
+        </div>
+
+        <!-- 筛选区域 -->
+        <div class="card">
+            <h2>条件筛选</h2>
+            <div class="filter-section">
+                <select id="collegeFilter">
+                    <option value="all">全部学院</option>
+                </select>
+                <select id="majorFilter">
+                    <option value="all">全部专业</option>
+                </select>
+                <select id="directionFilter">
+                    <option value="all">全部方向</option>
+                    <option value="考研">考研</option>
+                    <option value="全职工作">全职工作</option>
+                    <option value="留学">留学</option>
+                    <option value="公考">公考</option>
+                </select>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="resetFilters()">重置筛选</button>
+                <button class="btn btn-primary" onclick="exportData()">导出 CSV</button>
+            </div>
+        </div>
+
+        <!-- 数据列表 -->
+        <div class="card">
+            <h2>学长学姐信息</h2>
+            <div id="dataContainer">
+                <div class="empty-state" id="emptyState">
+                    <p>暂无数据，请先提交学长学姐信息</p>
+                </div>
+                <div class="table-container" id="tableContainer" style="display: none;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>学院</th>
+                                <th>专业</th>
+                                <th>年份</th>
+                                <th>方向</th>
+                                <th>擅长领域</th>
+                                <th>联系方式</th>
+                                <th>状态</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dataTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 提示消息容器 -->
+    <div id="toastContainer"></div>
+
+    <script src="js/storage.js"></script>
+    <script>
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initFilters();
+            loadData();
+            updateStats();
+        });
+        
+        // 初始化筛选下拉框
+        function initFilters() {
+            const colleges = Storage.getColleges();
+            const collegeSelect = document.getElementById('collegeFilter');
+            collegeSelect.innerHTML = '<option value="all">全部学院</option>';
+            colleges.forEach(college => {
+                collegeSelect.innerHTML += `<option value="${college}">${college}</option>`;
+            });
+            
+            // 监听学院变化，更新专业选项
+            collegeSelect.addEventListener('change', updateMajorFilter);
+            
+            // 监听筛选变化
+            document.getElementById('majorFilter').addEventListener('change', loadData);
+            document.getElementById('directionFilter').addEventListener('change', loadData);
+        }
+        
+        // 根据选择的学院更新专业选项
+        function updateMajorFilter() {
+            const college = document.getElementById('collegeFilter').value;
+            const majorSelect = document.getElementById('majorFilter');
+            
+            if (college === 'all') {
+                // 显示所有专业
+                const allMajors = Storage.getMajors();
+                majorSelect.innerHTML = '<option value="all">全部专业</option>';
+                allMajors.forEach(major => {
+                    majorSelect.innerHTML += `<option value="${major}">${major}</option>`;
+                });
+            } else {
+                // 只显示该学院的专业
+                const data = Storage.query({ status: true, college: college });
+                const majors = [...new Set(data.map(item => item.major))].sort();
+                majorSelect.innerHTML = '<option value="all">全部专业</option>';
+                majors.forEach(major => {
+                    majorSelect.innerHTML += `<option value="${major}">${major}</option>`;
+                });
+            }
+            
+            loadData();
+        }
+        
+        // 加载数据
+        function loadData() {
+            const filters = {
+                status: true,
+                college: document.getElementById('collegeFilter').value,
+                major: document.getElementById('majorFilter').value,
+                direction: document.getElementById('directionFilter').value
+            };
+            
+            const data = Storage.query(filters);
+            renderTable(data);
+        }
+        
+        // 渲染表格
+        function renderTable(data) {
+            const emptyState = document.getElementById('emptyState');
+            const tableContainer = document.getElementById('tableContainer');
+            const tbody = document.getElementById('dataTableBody');
+            
+            if (data.length === 0) {
+                emptyState.style.display = 'block';
+                tableContainer.style.display = 'none';
+                return;
+            }
+            
+            emptyState.style.display = 'none';
+            tableContainer.style.display = 'block';
+            
+            tbody.innerHTML = data.map(item => `
+                <tr>
+                    <td>${escapeHtml(item.college)}</td>
+                    <td>${escapeHtml(item.major)}</td>
+                    <td>${escapeHtml(item.year) || '-'}</td>
+                    <td><span class="badge badge-direction">${escapeHtml(item.direction)}</span></td>
+                    <td>${escapeHtml(item.skill) || '-'}</td>
+                    <td>${renderContact(item)}</td>
+                    <td><span class="badge ${item.status ? 'badge-success' : 'badge-secondary'}">${item.status ? '在架' : '已下架'}</span></td>
+                </tr>
+            `).join('');
+        }
+        
+        // 渲染联系方式（根据显隐设置）
+        function renderContact(item) {
+            if (item.is_show && item.contact) {
+                return escapeHtml(item.contact);
+            } else if (item.is_show) {
+                return '<span class="contact-hidden">暂无</span>';
+            } else {
+                return '<span class="contact-hidden">已隐藏</span>';
+            }
+        }
+        
+        // HTML转义，防止XSS
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // 重置筛选
+        function resetFilters() {
+            document.getElementById('collegeFilter').value = 'all';
+            document.getElementById('majorFilter').value = 'all';
+            document.getElementById('directionFilter').value = 'all';
+            updateMajorFilter();
+            loadData();
+        }
+        
+        // 更新统计信息
+        function updateStats() {
+            const allData = Storage.query({ status: true });
+            const kaoyanData = Storage.query({ status: true, direction: '考研' });
+            const jobData = Storage.query({ status: true, direction: '全职工作' });
+            const abroadData = Storage.query({ status: true, direction: '留学' });
+            
+            document.getElementById('totalCount').textContent = allData.length;
+            document.getElementById('kaoyanCount').textContent = kaoyanData.length;
+            document.getElementById('jobCount').textContent = jobData.length;
+            document.getElementById('abroadCount').textContent = abroadData.length;
+        }
+        
+        // 导出数据
+        function exportData() {
+            Storage.exportCSV();
+            showToast('数据已导出为 CSV 文件', 'success');
+        }
+        
+        // 显示提示消息
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

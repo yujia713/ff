@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>校园互助平台 - 学长信息提交</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 导航栏 -->
+        <nav class="nav">
+            <h1>校园互助平台</h1>
+            <div class="nav-links">
+                <a href="index.html" class="active">信息提交</a>
+                <a href="search.html">筛选检索</a>
+                <a href="manage.html">我的信息</a>
+            </div>
+        </nav>
+
+        <!-- 提交表单 -->
+        <div class="card">
+            <h2>学长信息提交</h2>
+            <form id="submitForm">
+                <div class="form-group">
+                    <label>学院名称 <span class="required">*</span></label>
+                    <input type="text" name="college" placeholder="请输入学院名称，如：计算机学院" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>专业名称 <span class="required">*</span></label>
+                    <input type="text" name="major" placeholder="请输入专业名称，如：软件工程" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>入学/毕业年份</label>
+                    <input type="text" name="year" placeholder="如：2020届或2020级">
+                </div>
+                
+                <div class="form-group">
+                    <label>发展方向 <span class="required">*</span></label>
+                    <select name="direction" required>
+                        <option value="">请选择发展方向</option>
+                        <option value="考研">考研</option>
+                        <option value="全职工作">全职工作</option>
+                        <option value="留学">留学</option>
+                        <option value="公考">公考</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>擅长答疑内容</label>
+                    <textarea name="skill" placeholder="请描述你擅长的答疑内容，如：数据结构、算法、考研数学等"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>联系方式</label>
+                    <input type="text" name="contact" placeholder="请输入微信号或邮箱">
+                </div>
+                
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" name="is_show" id="isShow" checked>
+                        <label for="isShow">公开联系方式</label>
+                    </div>
+                    <small style="color: #999; margin-top: 5px; display: block;">勾选后，你的联系方式将对其他人可见</small>
+                </div>
+                
+                <div class="form-group">
+                    <label>管理邮箱 <span class="required">*</span></label>
+                    <input type="email" name="email" placeholder="用于修改和下架你的信息" required>
+                    <small style="color: #999;">请务必填写正确的邮箱，以便后续管理你的信息</small>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">提交信息</button>
+                <button type="reset" class="btn btn-secondary">重置表单</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 提示消息容器 -->
+    <div id="toastContainer"></div>
+
+    <script src="js/storage.js"></script>
+    <script>
+        // 表单提交
+        document.getElementById('submitForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const data = {
+                college: formData.get('college').trim(),
+                major: formData.get('major').trim(),
+                year: formData.get('year').trim(),
+                direction: formData.get('direction'),
+                skill: formData.get('skill').trim(),
+                contact: formData.get('contact').trim(),
+                is_show: formData.get('is_show') === 'on',
+                email: formData.get('email').trim(),
+                status: true
+            };
+            
+            // 校验必填项
+            if (!data.college || !data.major || !data.direction || !data.email) {
+                showToast('请填写所有必填项', 'error');
+                return;
+            }
+            
+            // 校验邮箱格式
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(data.email)) {
+                showToast('请输入正确的邮箱格式', 'error');
+                return;
+            }
+            
+            // 保存数据
+            const newItem = Storage.add(data);
+            showToast('提交成功！你的信息已保存', 'success');
+            
+            // 重置表单
+            this.reset();
+            document.getElementById('isShow').checked = true;
+            
+            // 保存邮箱到 localStorage 用于后续管理
+            localStorage.setItem('last_submit_email', data.email);
+        });
+        
+        // 显示提示消息
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
